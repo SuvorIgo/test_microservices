@@ -1,0 +1,84 @@
+version: '3.9'
+
+services:
+  nats:
+    image: nats
+    ports:
+      - 4222:4222
+    container_name: nats_container
+    restart: unless-stopped
+    networks:
+      - microservices_network
+
+  postgres:
+    image: postgres
+    container_name: postgres_container
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PG_DATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    ports: 
+      - 5432:5432
+    depends_on:
+      - nats
+    restart: unless-stopped
+    networks:
+      - microservices_network
+    
+  pgadmin: 
+    image: dpage/pgadmin4
+    container_name: pgadmin_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@microservice.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "True"
+    ports: 
+      - 15432:80
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks: 
+      - microservices_network
+
+  api_gateway:
+    build: ./api-gateway
+    container_name: api_gateway_container
+    ports: 
+      - 3333:3000
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - microservices_network
+  
+  auth_service:
+    build: ./auth
+    container_name: auth_service_container
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - microservices_network
+
+  russian_it_companies_service:
+    build: ./russian-it-companies
+    container_name: russian_it_companies_service_container
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - microservices_network
+
+volumes:
+  postgres:
+  pgadmin:
+
+networks:
+  microservices_network:
+    driver: bridge
+  
